@@ -79,21 +79,25 @@ exports.deleteData = function(user, data, callback)
     var result = 1;
     var dataTabel = mongoose.model(user+'_datas', dataScheMa);
     var options = {};
-
-    dataTabel.collection.remove(data, options, function(err,doc)
+    console.log('delete');
+    console.log(data);
+    for(var k in data)
     {
-        if(err)
+        dataTabel.remove(k, function(err,doc)
         {
-            console.log('update fail');
-            console.log(err);
-            result = -1;
-        }
-        else
-        {
-            console.log('update result');
-            console.log(doc);
-        }
-    });
+            if(err)
+            {
+                console.log('delete fail');
+                console.log(err);
+                result = -1;
+            }
+            else
+            {
+                console.log('delete result');
+                console.log(doc);
+            }
+        });
+    }
     callback(result);
 }
 
