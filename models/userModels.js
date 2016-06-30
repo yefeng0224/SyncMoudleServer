@@ -69,7 +69,7 @@ exports.updateVersion = function(user, version,callback)
     var query = { 'name': user};
     var update = {'version': version};
     options = {};
-    userTabel.findOneAndUpdate(query, update, options, function(err,doc)
+    userTabel.findOneAndUpdate(query, {'$set': update}, options, function(err,doc)
     {
         if(err)
         {

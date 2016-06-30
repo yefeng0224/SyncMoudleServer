@@ -30,3 +30,70 @@ exports.insertData = function(user, data, callback)
     });
 }
 
+exports.updateData = function(user, data, callback)
+{
+    var result = 1;
+    var dataTabel = mongoose.model(user+'_datas', dataScheMa);
+    var options = {'upsert' : true};
+
+    for(var k in data)
+    {
+        var query = {};
+        var update = {};
+        for(var i in data[k])
+        {
+            console.log(i);
+            if( i == '_id')
+            {
+                console.log('_id :'  + data[k][i])
+                query[i] = data[k][i];
+            }
+            else
+            {
+                console.log(i + ' : '  + data[k][i])
+                update[i] = data[k][i];
+            }
+        }
+        console.log(query);
+        console.log(update);
+        dataTabel.collection.update(query, {'$set': update}, options, function(err,doc)
+        {
+            if(err)
+            {
+                console.log('update fail');
+                console.log(err);
+                result = -1;
+            }
+            else
+            {
+                console.log('update result');
+                console.log(doc);
+            }
+        });
+    }
+    callback(result);
+}
+
+exports.deleteData = function(user, data, callback)
+{
+    var result = 1;
+    var dataTabel = mongoose.model(user+'_datas', dataScheMa);
+    var options = {};
+
+    dataTabel.collection.remove(data, options, function(err,doc)
+    {
+        if(err)
+        {
+            console.log('update fail');
+            console.log(err);
+            result = -1;
+        }
+        else
+        {
+            console.log('update result');
+            console.log(doc);
+        }
+    });
+    callback(result);
+}
+

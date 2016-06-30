@@ -45,7 +45,7 @@ exports.getChgList = function(user, fromversion, endVersion, callback)
             {
                 if(doc[i]._id > result.version)
                 {
-                    result.version = doc[i].version;
+                    result.version = doc[i]._id;
                 }
                 for(var j=0; j < doc[i].list.length; j++)
                 {
@@ -61,18 +61,35 @@ exports.getChgList = function(user, fromversion, endVersion, callback)
         else
         {
             console.log('no version found');
+            result.version = endVersion;
             callback(result);
         }
     });
 }
 
-exports.updateFromClient = function(user, version, data, callback)
+exports.insertVersionList = function(user, version, data, callback)
 {
     console.log(data);
+    var chglist = [];
+    for(var i =0; i < data.DELETE.length; i++)
+    {
+        console.log(data.DELETE[i]._id);
+        chglist.push(data.DELETE[i]._id);
+    }
+    for(var i =0; i < data.INSERT.length; i++)
+    {
+        chglist.push(data.INSERT[i]._id);
+    }
+    for(var i =0; i < data.UPDATE.length; i++)
+    {
+        console.log(data.UPDATE[i]);
+        console.log(data.UPDATE[i]._id);
+        chglist.push(data.UPDATE[i]._id);
+    }
     var versionTabel = mongoose.model(user+'_versions', versionScheMa);
     var jsonData = {
         '_id': version,
-        'list': data
+        'list': chglist
     };
 
     versionTabel.create(jsonData,function(err,doc)

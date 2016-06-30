@@ -1,6 +1,7 @@
 var express = require('express');
 var router = express.Router();
 
+var async = require('async');
 var mongoose = require('mongoose');
 
 var userModels = require('../models/userModels');
@@ -130,63 +131,275 @@ router.post('/homepage', function(req, res) {
 });
 
 router.post('/test', function(req, res) {
-
+    var errorNo = '';
     console.log(req);
     userModels.userAuth(req.body.userid,req.body.password,function(serverVersion)
     {
         if(serverVersion == -1)
         {
-            res.redirect('/');
+            res.writeHead(200, {'Content-Type': 'text/html'});
+            res.write('Auth_Fail');
+            res.end();
         }
         else
         {
             console.log("version: " + serverVersion);
             req.session.userid = req.sessionID;
 
-            var jsonlist = JSON.parse(req.body.list);
-            if(jsonlist.length > 0)
+            var jsonlist = JSON.parse(req.body.data);
+            console.log(jsonlist);
+            if(jsonlist.DELETE.length > 0 || jsonlist.INSERT.length> 0 || jsonlist.UPDATE.length > 0)
             {
                 serverVersion = serverVersion + 1;
-                versionModels.updateFromClient(req.body.userid, serverVersion, jsonlist, function(updateResult)
+                async.series(
                 {
-                    console.log(updateResult);
-                    if(updateResult == -1)
+                    insert: function(done)
                     {
-                        console.log('update error');
+                        if(jsonlist.INSERT.length> 0 )
+                        {
+                            dataModels.insertData(req.body.userid, jsonlist.INSERT, function(result)
+                            {
+                                console.log(result);
+                                if(result == -1)
+                                {
+                                    errorNo = 'Server_Fail_In_Insert';
+                                }
+                                done(null,result);
+                            });
+                        }
+                    },
+                    update: function(done)
+                    {
+                        if(jsonlist.UPDATE.length> 0  && errorNo == '')
+                        {
+                            dataModels.updateData(req.body.userid, jsonlist.UPDATE, function(result)
+                            {
+                                console.log(result);
+                                if(result == -1)
+                                {
+                                    errorNo = 'Server_Fail_In_Update';
+                                }
+                                done(null,result);
+                            });
+                        }
+                        else
+                        {
+                            done(null,null)
+                        }
+                    },
+                    delete: function(done)
+                    {
+                        if(jsonlist.DELETE.length> 0  && errorNo == '')
+                        {
+                            dataModels.deleteData(req.body.userid, jsonlist.DELETE, function(result)
+                            {
+                                console.log(result);
+                                if(result == -1)
+                                {
+                                    errorNo = 'Server_Fail_In_Delete';
+                                }
+                                done(null,result);
+                            });
+                        }
+                        else
+                        {
+                            done(null,null)
+                        }
+                    },
+                    insertVersionList: function (done)
+                    {
+                        if(errorNo == '')
+                        {
+                            versionModels.insertVersionList(req.body.userid, serverVersion, jsonlist, function(result)
+                            {
+                               console.log(result);
+                               if(result == -1)
+                                {
+                                    errorNo = 'Server_Fail_In_Insert_Version';
+                                }
+                                done(null,result);
+                            });
+                        }
+                        else
+                        {
+                            done(null,null)
+                        }
+                    },
+                    updateVersion: function(done)
+                    {
+                        if(errorNo == '')
+                        {
+                            userModels.updateVersion(req.body.userid,serverVersion, function(result)
+                            {
+                                console.log(result);
+                               if(result == -1)
+                                {
+                                    errorNo = 'Server_Fail_In_Update_User_Version';
+                                }
+                                done(null,result);
+                            });
+                        }
+                        else
+                        {
+                            done(null,null)
+                        }
+                    },
+                    getChgList: function(done)
+                    {
+                         if(errorNo == '')
+                        {
+                            versionModels.getChgList(req.body.userid, req.body.version, serverVersion, function(result)
+                            {
+                                console.log(result);
+                                if(result.version == -1)
+                                {
+                                    errorNo = 'Server_Fail_In_Get_Chg_List';
+                                }
+                                done(null,result);
+                            });
+                        }
+                        else
+                        {
+                            done(null,null)
+                        }
+                    }
+                }, function (error, result) {
+                    console.log('result:', result);
+                    console.log('errorNo:' + errorNo);
+                    if(errorNo == '')
+                    {
+                        res.writeHead(200, {'Content-Type': 'text/html'});
+                        res.write(JSON.stringify(result.getChgList));
+                        res.end();
                     }
                     else
                     {
-                        userModels.updateVersion(req.body.userid,serverVersion, function(versionResult)
-                        {
-                            console.log(versionResult);
-                        });
-                        versionModels.getChgList(req.body.userid, req.body.version, serverVersion, function(list)
-                        {
-                            console.log(list);
-                        });
-                        var jsondata = JSON.parse(req.body.data);
-                        dataModels.insertData(req.body.userid, jsondata, function(insertResult)
-                        {
-                            console.log(insertResult);
-                        });
+                        res.writeHead(200, {'Content-Type': 'text/html'});
+                        res.write(errorNo);
+                        res.end();
                     }
                 });
+
+
+                /*
+                if(jsonlist.INSERT.length> 0 )
+                {
+                    dataModels.insertData(req.body.userid, jsonlist.INSERT, function(insertResult)
+                    {
+                        console.log(insertResult);
+                        if(insertResult == -1)
+                        {
+                            isContinue = false;
+                            res.writeHead(200, {'Content-Type': 'text/html'});
+                            res.write('Server_Fail_In_Insert');
+                            res.end();
+                        }
+                    });
+                }
+                if(jsonlist.UPDATE.length> 0  && isContinue)
+                {
+                    dataModels.updateData(req.body.userid, jsonlist.UPDATE, function(updateResult)
+                    {
+                        console.log(updateResult);
+                        if(updateResult == -1)
+                        {
+                            isContinue = false;
+                            res.writeHead(200, {'Content-Type': 'text/html'});
+                            res.write('Server_Fail_In_Update');
+                            res.end();
+
+                        }
+                    });
+                }
+                if(jsonlist.DELETE.length> 0  && isContinue)
+                {
+                    dataModels.deleteData(req.body.userid, jsonlist.DELETE, function(deleteResult)
+                    {
+                        console.log(deleteResult);
+                        if(deleteResult == -1)
+                        {
+                            isContinue = false;
+                            res.writeHead(200, {'Content-Type': 'text/html'});
+                            res.write('Server_Fail_In_Delete');
+                            res.end();
+
+                        }
+                    });
+                }
+                if(isContinue)
+                {
+                    versionModels.insertVersionList(req.body.userid, serverVersion, jsonlist, function(insertVersionResult)
+                    {
+                        console.log(insertVersionResult);
+                        if(insertVersionResult == -1)
+                        {
+                            console.log('insertVersionResult  error');
+                            isContinue = false;
+                            res.writeHead(200, {'Content-Type': 'text/html'});
+                            res.write('Server_Fail_In_Insert_Version');
+                            res.end();
+                        }
+                    });
+                }
+                if(isContinue)
+                {
+                    userModels.updateVersion(req.body.userid,serverVersion, function(versionResult)
+                    {
+                        console.log(versionResult);
+                        if(versionResult == -1)
+                        {
+                            console.log('update Version  error');
+                            isContinue = false;
+                            res.writeHead(200, {'Content-Type': 'text/html'});
+                            res.write('Server_Fail_In_Update_User_Version');
+                            res.end();
+                        }
+                    });
+                }
+                if(isContinue)
+                {
+                    versionModels.getChgList(req.body.userid, req.body.version, serverVersion, function(list)
+                    {
+                        console.log(list);
+                        if(list.version == -1)
+                        {
+                            isContinue = false;
+                            res.writeHead(200, {'Content-Type': 'text/html'});
+                            res.write('Server_Fail_In_Get_Chg_List');
+                            res.end();
+                        }
+                        else
+                        {
+                            res.writeHead(200, {'Content-Type': 'text/html'});
+                            res.write(list);
+                            res.end();
+                        }
+                    });
+                }
+                */
             }
             else
             {
                 versionModels.getChgList(req.body.userid, req.body.version, -1, function(list)
                 {
                     console.log(list);
+                    if(list.version == -1)
+                    {
+                        isContinue = false;
+                        res.writeHead(200, {'Content-Type': 'text/html'});
+                        res.write('Server_Fail_In_Get_Chg_List');
+                        res.end();
+                    }
+                    else
+                    {
+                        res.writeHead(200, {'Content-Type': 'text/html'});
+                        res.write(JSON.stringify(list));
+                        res.end();
+                    }
                 });
             }
-
-
-            res.writeHead(200, {'Content-Type': 'text/html'});
-            res.write("Hello Upload");
-            res.end();
         }
     });
-
 });
 
 module.exports = router;
