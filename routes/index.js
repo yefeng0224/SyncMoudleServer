@@ -153,7 +153,7 @@ router.post('/test', function(req, res) {
                 serverVersion = serverVersion + 1;
                 async.series(
                 {
-                    insert: function(done)
+                    insertData: function(done)
                     {
                         if(jsonlist.INSERT.length> 0 )
                         {
@@ -167,8 +167,12 @@ router.post('/test', function(req, res) {
                                 done(null,result);
                             });
                         }
+                        else
+                        {
+                            done(null,'');
+                        }
                     },
-                    update: function(done)
+                    updateData: function(done)
                     {
                         if(jsonlist.UPDATE.length> 0  && errorNo == '')
                         {
@@ -184,10 +188,10 @@ router.post('/test', function(req, res) {
                         }
                         else
                         {
-                            done(null,null)
+                            done(null,'');
                         }
                     },
-                    delete: function(done)
+                    deleteData: function(done)
                     {
                         if(jsonlist.DELETE.length> 0  && errorNo == '')
                         {
@@ -203,7 +207,7 @@ router.post('/test', function(req, res) {
                         }
                         else
                         {
-                            done(null,null)
+                            done(null,'');
                         }
                     },
                     insertVersionList: function (done)
@@ -222,7 +226,7 @@ router.post('/test', function(req, res) {
                         }
                         else
                         {
-                            done(null,null)
+                            done(null,'');
                         }
                     },
                     updateVersion: function(done)
@@ -241,7 +245,7 @@ router.post('/test', function(req, res) {
                         }
                         else
                         {
-                            done(null,null)
+                            done(null,'');
                         }
                     },
                     getChgList: function(done)
@@ -260,7 +264,7 @@ router.post('/test', function(req, res) {
                         }
                         else
                         {
-                            done(null,null)
+                            done(null,'');
                         }
                     }
                 }, function (error, result) {
@@ -268,9 +272,15 @@ router.post('/test', function(req, res) {
                     console.log('errorNo:' + errorNo);
                     if(errorNo == '')
                     {
-                        res.writeHead(200, {'Content-Type': 'text/html'});
-                        res.write(JSON.stringify(result.getChgList));
-                        res.end();
+                        dataModels.generateUpdateList(req.body.userid, result.getChgList, function(updateInfo)
+                        {
+                            console.log('update info');
+                            console.log(updateInfo);
+                            res.writeHead(200, {'Content-Type': 'text/html'});
+                            res.write(JSON.stringify(updateInfo));
+                            res.end();
+                        });
+
                     }
                     else
                     {

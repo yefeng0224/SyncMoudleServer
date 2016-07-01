@@ -100,6 +100,7 @@ exports.insertVersionList = function(user, version, data, callback)
         }
         else
         {
+            console.log('insert change list success.');
             callback(version);
         }
     });

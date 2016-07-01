@@ -1,10 +1,12 @@
 var mongoose = require("mongoose");
+var async = require('async');
 var Schema = mongoose.Schema;
 
 var dataScheMa = new Schema(
     {
         _id: {type: String, index: true, unique: true},
-        value: String
+        time: String,
+        title: String
     },
     {
         _id: false,
@@ -16,7 +18,7 @@ exports.insertData = function(user, data, callback)
 {
     var dataTabel = mongoose.model(user+'_datas', dataScheMa);
     var options  = {};
-    dataTabel.collection.insert(data,function(err,doc)
+    dataTabel.create(data,function(err,doc)
     {
          if(err){
             console.log('insert data list error' + err);
@@ -32,31 +34,29 @@ exports.insertData = function(user, data, callback)
 
 exports.updateData = function(user, data, callback)
 {
+
     var result = 1;
     var dataTabel = mongoose.model(user+'_datas', dataScheMa);
     var options = {'upsert' : true};
-
-    for(var k in data)
+     async.forEach(data, function(item, done)
     {
+        console.log('item');
+        console.log(item);
+
         var query = {};
         var update = {};
-        for(var i in data[k])
+        for(var i in item)
         {
-            console.log(i);
             if( i == '_id')
             {
-                console.log('_id :'  + data[k][i])
-                query[i] = data[k][i];
+                query[i] = item[i];
             }
             else
             {
-                console.log(i + ' : '  + data[k][i])
-                update[i] = data[k][i];
+                update[i] = item[i];
             }
         }
-        console.log(query);
-        console.log(update);
-        dataTabel.collection.update(query, {'$set': update}, options, function(err,doc)
+        dataTabel.update(query, {'$set': update}, options, function(err,doc)
         {
             if(err)
             {
@@ -69,9 +69,13 @@ exports.updateData = function(user, data, callback)
                 console.log('update result');
                 console.log(doc);
             }
+            done(null,'');
         });
-    }
-    callback(result);
+
+    },function (error, result2) {
+        console.log('return');
+        callback(result);
+    });
 }
 
 exports.deleteData = function(user, data, callback)
@@ -81,9 +85,10 @@ exports.deleteData = function(user, data, callback)
     var options = {};
     console.log('delete');
     console.log(data);
-    for(var k in data)
+     async.forEach(data, function(item, done)
     {
-        dataTabel.remove(k, function(err,doc)
+        console.log(item);
+        dataTabel.remove(item, function(err,doc)
         {
             if(err)
             {
@@ -96,8 +101,55 @@ exports.deleteData = function(user, data, callback)
                 console.log('delete result');
                 console.log(doc);
             }
+            done(null,'');
         });
+    },function (error, result2) {
+        callback(result);
+    });
+}
+
+exports.generateUpdateList = function(user,data,callback)
+{
+    var dataTabel = mongoose.model(user+'_datas', dataScheMa);
+    var query_doc = {};
+    var result =
+    {
+        version:-1,
+        'new' : [],
+        'delete': []
     }
-    callback(result);
+    result.version = data.version;
+
+    async.forEach(data.list, function(item, done)
+    {
+        query_doc = {'_id': item};
+        console.log('quer');
+        dataTabel.findOne(query_doc, function(err, doc)
+        {
+            if(err)
+            {
+                console.log(err);
+            }
+            else
+            {
+                if(doc == null)
+                {
+                    result.delete.push(query_doc);
+                }
+                else
+                {
+                    result.new.push(doc);
+                }
+            }
+            done(null,'');
+        });
+    },
+    function (error, result2) {
+        console.log(result2);
+        console.log('generate');
+        console.log(result);
+        callback(result);
+    });
+
 }
 
