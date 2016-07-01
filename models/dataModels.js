@@ -120,12 +120,14 @@ exports.generateUpdateList = function(user,data,callback)
     }
     result.version = data.version;
 
-    async.forEach(data.list, function(item, done)
+    async.concat(data.list, function(item, done)
     {
         query_doc = {'_id': item};
-        console.log('quer');
+        console.log(query_doc);
         dataTabel.findOne(query_doc, function(err, doc)
         {
+            done(err,doc);
+            /*
             if(err)
             {
                 console.log(err);
@@ -142,11 +144,40 @@ exports.generateUpdateList = function(user,data,callback)
                 }
             }
             done(null,'');
+            */
         });
     },
     function (error, result2) {
+        console.log('error:',error);
         console.log(result2);
         console.log('generate');
+        var isFind = false;
+        var doc_length = result2.length;
+        var i = 0;
+        for(var k in data.list)
+        {
+            i = 0;
+            isFind = false;
+            while(i < doc_length && !isFind)
+            {
+                if(result2[i]._id == data.list[k])
+                {
+                    isFind = true;
+                }
+                else
+                {
+                    i++;
+                }
+            }
+            if(isFind)
+            {
+                result.new.push(result2[i]);
+            }
+            else
+            {
+                result.delete.push({'_id':data.list[k]});
+            }
+        }
         console.log(result);
         callback(result);
     });
