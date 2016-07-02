@@ -27,34 +27,6 @@ exports.userAuth = function(name, password, callback)
             {
                 console.log(name + ":"+doc[0].version + ": login success in " + new Date());
                 callback(doc[0].version);
-                /*
-                var version_new = doc[0].version + 1;
-                console.log(doc[0]);
-                console.log("doc.version: " + doc[0].version);
-                console.log("version_new: " + version_new);
-                var sessionID = req.sessionID;
-                req.session.userid = sessionID;
-
-                var conditions = { 'name': req.body.userid, 'password': req.body.password};
-                var update     = {$set : { 'version':version_new, 'test':{'name':query_doc.name,'value':query_doc.password}}};
-                var options    = {upsert : true};
-                user.update(conditions, update, options, function(error){
-                    if(error) {
-                        console.log(error);
-                    } else {
-                        console.log('update ok!');
-                    }
-                });
-                var new_doc = {'user':'yefeng','version':version_new, 'list':['2','5','6']};
-                version.create(new_doc, function(err){
-                                    if(err) {
-                                            console.log("save failed!");
-                                        } else {
-                                            console.log("save success!");
-                                        }
-                                });
-                res.render('homepage', { title: 'homepage' });
-                */
             }
             else if(doc.length == 0 || doc.length > 1)
             {
@@ -83,5 +55,27 @@ exports.updateVersion = function(user, version,callback)
     });
 // is sent as
 
+}
+
+exports.registerUser = function(user, password,callback)
+{
+    var data = 
+    {
+        'name': user,
+        'password': password,
+        'version': 0
+    }
+    userTabel.create(data,function(err,doc)
+    {
+        if(err)
+        {
+            callback(-1);
+        }
+        else
+        {
+            callback(1);
+        }
+
+    });
 }
 
